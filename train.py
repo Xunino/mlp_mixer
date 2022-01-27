@@ -12,12 +12,14 @@ class Trainer:
                  n_block_mlp_mixer=8,
                  batch_size=32,
                  epochs=32,
+                 val_size=0.2,
                  saved_model="model.h5"):
         self.train_data = train_data
         self.val_data = val_data
         self.image_size = image_size
         self.epochs = epochs
         self.batch_size = batch_size
+        self.val_size = val_size
         self.saved_model = saved_model
 
         assert (image_size * image_size) % (
@@ -29,10 +31,10 @@ class Trainer:
     def train(self):
         train_ds = image_dataset_from_directory(self.train_data,
                                                 subset="training",
-                                                seed=42,
+                                                seed=22,
                                                 image_size=(self.image_size, self.image_size),
                                                 batch_size=self.batch_size,
-                                                validation_split=0.1,
+                                                validation_split=self.val_size,
                                                 shuffle=True)
 
         val_ds = image_dataset_from_directory(self.val_data,
@@ -40,7 +42,7 @@ class Trainer:
                                               seed=22,
                                               image_size=(self.image_size, self.image_size),
                                               batch_size=self.batch_size,
-                                              validation_split=0.1,
+                                              validation_split=self.val_size,
                                               shuffle=True)
 
         self.model.compile(optimizer=self.optimizer, loss=SparseCategoricalCrossentropy(), metrics=["acc"])

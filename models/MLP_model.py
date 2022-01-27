@@ -22,16 +22,16 @@ class MLPMixer(Layer):
         # Channel mixing: (C)
         # Input: (batch_size, patches, C)
         # Weight_1: (C, DC) - C: Hidden_dims (512) -- DC: MLP_dims (2048) -> (batch_size, patches, DC)
-        self.W_1 = tf.Variable(initial_value=w_init(shape=(C, DC), dtype=tf.float32), trainable=True)
+        self.W_1 = tf.Variable(initial_value=w_init(shape=(C, DC), dtype=tf.float32), trainable=True, name="w1")
         # Weight_2: (DC, C) - C: Hidden_dims (512) -- DC: MLP_dims (2048) -> (batch_size, patches, C)
-        self.W_2 = tf.Variable(initial_value=w_init(shape=(DC, C), dtype=tf.float32), trainable=True)
+        self.W_2 = tf.Variable(initial_value=w_init(shape=(DC, C), dtype=tf.float32), trainable=True, name="w2")
 
         # Token mixing: (S)
         # Input: (batch_size, S, C) -> transpose -> (batch_size, C, S) -- S is patches = (HW/P**2)
         # Weight_3: (S, DS) - S: (HW/P**2) -- DS: MLP_dims (256) -> (batch_size, C, DS)
-        self.W_3 = tf.Variable(initial_value=w_init(shape=(S, DS), dtype=tf.float32), trainable=True)
+        self.W_3 = tf.Variable(initial_value=w_init(shape=(S, DS), dtype=tf.float32), trainable=True, name="w3")
         # Weight_4: (DS, S) - S: (HW/P**2) -- DS: MLP_dims (256) -> (batch_size, C, S) -> transpose-> (batch_size, S, C)
-        self.W_4 = tf.Variable(initial_value=w_init(shape=(DS, S), dtype=tf.float32), trainable=True)
+        self.W_4 = tf.Variable(initial_value=w_init(shape=(DS, S), dtype=tf.float32), trainable=True, name="w4")
 
     def __call__(self, x, *args, **kwargs):
         # Token mixing
@@ -58,7 +58,7 @@ class MLPMixer(Layer):
 
 
 class MLPMixerModel(Model):
-    def __init__(self, C, DC, S, DS, num_classes, image_size=256, patch_size=32, n_block_mlp_mixer=8):
+    def __init__(self, C, DC, S, DS, num_classes, image_size=256, patch_size=32, n_block_mlp_mixer=8, name=None):
         """
         :param C: Hidden dims
         :param DC: MLP_dims (2048)
@@ -68,7 +68,7 @@ class MLPMixerModel(Model):
         :param patch_size: (32, 32)
         :param n_block_mlp_mixer: (8)
         """
-        super(MLPMixerModel, self).__init__()
+        super(MLPMixerModel, self).__init__(name=name)
         self.augments = Sequential([
             Resizing(height=image_size, width=image_size),
             Normalization(),
