@@ -116,13 +116,13 @@ class MLPMixerModel(Model):
 
 
 if __name__ == '__main__':
+    image_size = 224
+    patch_size = 32
     C = 512
     DC = 2048
-    S = (256 * 256) // (32 * 32)
     DS = 256
-    image_size = 256
+    S = (image_size * image_size) // (patch_size * patch_size)
     num_classes = 1000
-    patch_size = 32
     n_blocks = 8
     images = tf.random.uniform(shape=(1, 256, 256, 3), maxval=1.)
     mlp = MLPMixerModel(C, DC, S, DS, num_classes, image_size, patch_size, n_blocks)
