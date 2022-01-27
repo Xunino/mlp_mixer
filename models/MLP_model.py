@@ -57,7 +57,7 @@ class MLPMixer(Layer):
     def channel_mixing(self, x):
         norm_out = self.layerNorm_channel(x)
         out = tf.matmul(norm_out, self.W_1)
-        out = tf.nn.leaky_relu(out)  # This is gelu activate in tf 2.7
+        out = tf.nn.gelu(out)
         out = tf.matmul(out, self.W_2) + x
         return out
 
@@ -65,7 +65,7 @@ class MLPMixer(Layer):
         norm_out = self.layerNorm_token(x)
         out = tf.transpose(norm_out, perm=(0, 2, 1))  # (BS, C, S)
         out = tf.matmul(out, self.W_3)
-        out = tf.nn.leaky_relu(out)  # This is gelu activate in tf 2.7
+        out = tf.nn.gelu(out)
         out = tf.matmul(out, self.W_4)
         out = tf.transpose(out, perm=(0, 2, 1)) + x  # (BS, S, C)
         return out
