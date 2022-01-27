@@ -1,8 +1,11 @@
+import os
 import tensorflow as tf
 from models.MLP_model import MLPMixerModel
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing import image_dataset_from_directory
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.metrics import SparseCategoricalAccuracy
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 
 class Trainer:
@@ -27,6 +30,16 @@ class Trainer:
 
         self.model = MLPMixerModel(C, DC, S, DS, classes, image_size, patch_size, n_block_mlp_mixer)
         self.optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999)
+        self.loss = SparseCategoricalCrossentropy()
+        self.accuracy = SparseCategoricalAccuracy()
+
+        # Initialize check point
+        self.saved_checkpoint = os.getcwd() + "/saved_checkpoint/"
+        if not os.path.exists(self.saved_checkpoint):
+            os.mkdir(self.saved_checkpoint)
+        ckpt = tf.train.Checkpoint(transformer=self.model,
+                                   optimizer=self.optimizer)
+        self.ckpt_manager = tf.train.CheckpointManager(ckpt, self.saved_checkpoint, max_to_keep=5)
 
     def train(self):
         train_ds = image_dataset_from_directory(self.train_data,
@@ -44,10 +57,16 @@ class Trainer:
                                               batch_size=self.batch_size,
                                               validation_split=self.val_size,
                                               shuffle=True)
+        self.model.compile(optimizer=self.optimizer, loss=self.loss, metrics=["acc"])
+        self.model.fit(train_ds, batch_size=self.batch_size, epochs=self.epochs, validation_data=val_ds)
+        self.ckpt_manager.save()
 
-        self.model.compile(optimizer=self.optimizer, loss=SparseCategoricalCrossentropy(), metrics=["acc"])
-        self.model.fit(train_ds, batch_size=self.batch_size, epochs=self.epochs, validation_data=val_ds, verbose=1)
-        self.model.save_weights(self.saved_model)
+    def predict(self, image_path):
+        images = load_img(image_path)
+        images = img_to_array(images)[tf.newaxis, ...]
+        images = tf.image.resize(images, size=(self.image_size, image_size))
+        self.ckpt_manager.restore_or_initialize()
+        return self.model.predict(images)
 
 
 if __name__ == '__main__':
@@ -55,17 +74,21 @@ if __name__ == '__main__':
     val_path = "dataset/val"
     image_size = 256
     patch_size = 32
-    batch_size = 10
-    epochs = 10
+    batch_size = 20
+    epochs = 2
     classes = 2
     n_blocks = 8
     C = 512
     DC = 2048
     S = (image_size * image_size) // (patch_size * patch_size)
     DS = 256
-    Trainer(train_data=train_path,
-            val_data=val_path,
-            C=C, DC=DC, S=S, DS=DS,
-            classes=classes, image_size=image_size,
-            patch_size=patch_size, batch_size=batch_size,
-            epochs=epochs, n_block_mlp_mixer=n_blocks).train()
+    trainer = Trainer(train_data=train_path,
+                      val_data=val_path,
+                      C=C, DC=DC, S=S, DS=DS,
+                      classes=classes, image_size=image_size,
+                      patch_size=patch_size, batch_size=batch_size,
+                      epochs=epochs, n_block_mlp_mixer=n_blocks)
+
+    test_image = "dataset/train/faces/00000.jpg"
+    # trainer.train()
+    print(trainer.predict(test_image))
