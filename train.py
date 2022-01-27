@@ -29,7 +29,6 @@ class Trainer:
         self.model = MLPMixerModel(C, DC, S, DS, classes, image_size, patch_size, n_block_mlp_mixer)
         self.optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999)
         self.loss = SparseCategoricalCrossentropy()
-        self.accuracy = SparseCategoricalAccuracy()
 
         # Initialize check point
         self.saved_checkpoint = os.getcwd() + "/saved_checkpoint/"
