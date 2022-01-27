@@ -15,15 +15,13 @@ class Trainer:
                  n_block_mlp_mixer=8,
                  batch_size=32,
                  epochs=32,
-                 val_size=0.2,
-                 saved_model="model.h5"):
+                 val_size=0.2):
         self.train_data = train_data
         self.val_data = val_data
         self.image_size = image_size
         self.epochs = epochs
         self.batch_size = batch_size
         self.val_size = val_size
-        self.saved_model = saved_model
 
         assert (image_size * image_size) % (
                 patch_size * patch_size) == 0, "Make sure the image size is dividable by patch size"
@@ -90,5 +88,5 @@ if __name__ == '__main__':
                       epochs=epochs, n_block_mlp_mixer=n_blocks)
 
     test_image = "dataset/train/faces/00000.jpg"
-    # trainer.train()
+    trainer.train()
     print(trainer.predict(test_image))
