@@ -1,6 +1,8 @@
 import tensorflow as tf
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Layer, Dense, LayerNormalization
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.layers import Layer, Dense, LayerNormalization, GlobalAvgPool1D, Dropout
+from tensorflow.keras.layers.experimental.preprocessing import Normalization, RandomFlip, RandomRotation, RandomZoom, \
+    Resizing
 
 
 class SplitPatch(Layer):
@@ -72,12 +74,45 @@ class MLPMixer(Layer):
 
 
 class MLPMixerModel(Model):
-    def __init__(self, ):
+    def __init__(self, C, DC, S, DS, num_classes, image_size=256, patch_size=32, n_block_mlp_mixer=8):
+        """
+        :param C: Hidden dims
+        :param DC: MLP_dims (2048)
+        :param S: HW/P**2
+        :param DS: MLP_dims (256)
+        :param num_classes:
+        :param patch_size: (32, 32)
+        :param n_block_mlp_mixer: (8)
+        """
         super(MLPMixerModel, self).__init__()
-        self.classification = None
+        self.augments = Sequential([
+            Resizing(height=image_size, width=image_size),
+            Normalization(),
+            RandomFlip(),
+            RandomRotation(factor=0.02),
+            RandomZoom(height_factor=0.2, width_factor=0.2)
+        ])
 
-    def __call__(self, *args, **kwargs):
-        pass
+        self.split_patches = SplitPatch(patch_size)
+
+        self.projection = Dense(C)
+        self.blocks = [MLPMixer(C, DC, S, DS) for _ in range(n_block_mlp_mixer)]
+
+        self.classification = Sequential([
+            GlobalAvgPool1D(),
+            Dropout(0.2),
+            Dense(num_classes, activation="softmax")
+        ])
+
+    def __call__(self, x, *args, **kwargs):
+        x = self.augments(x)
+        x = self.split_patches(x)
+        x = self.projection(x)
+        for block in self.blocks:
+            x = block(x)
+
+        x = self.classification(x)
+        return x
 
 
 if __name__ == '__main__':
@@ -85,10 +120,11 @@ if __name__ == '__main__':
     DC = 2048
     S = (256 * 256) // (32 * 32)
     DS = 256
+    image_size = 256
+    num_classes = 1000
+    patch_size = 32
+    n_blocks = 8
     images = tf.random.uniform(shape=(1, 256, 256, 3), maxval=1.)
-    image_patches = SplitPatch(32)
-    mlp = MLPMixer(C, DC, S, DS)
-    x = image_patches(images)
-    x = Dense(C)(x)
-    x = mlp(x)
+    mlp = MLPMixerModel(C, DC, S, DS, num_classes, image_size, patch_size, n_blocks)
+    x = mlp(images)
     print(x.shape)
