@@ -78,7 +78,7 @@ class MLPMixerModel(Model):
         """
         :param C: Hidden dims
         :param DC: MLP_dims (2048)
-        :param S: HW/P**2
+        :param S: Patches (token) (HW/P**2)
         :param DS: MLP_dims (256)
         :param num_classes:
         :param patch_size: (32, 32)
