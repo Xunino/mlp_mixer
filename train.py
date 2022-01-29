@@ -1,26 +1,33 @@
 import os
 import tensorflow as tf
 from tqdm import tqdm
+from loader import Loader
+from argparse import ArgumentParser
 from models.MLP_model import MLPMixerModel
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import SparseCategoricalCrossentropy
-from tensorflow.keras.metrics import SparseCategoricalAccuracy, Mean
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from loader import Loader
 from tensorflow.keras.models import Sequential
+from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.metrics import SparseCategoricalAccuracy
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.layers.experimental.preprocessing import Normalization, RandomFlip, RandomRotation, RandomZoom
 
 
 class Trainer:
-    def __init__(self, train_data, C, DC, S, DS, classes, image_size,
+    def __init__(self, C, DC, DS,
+                 train_path,
+                 val_path,
+                 classes,
+                 image_size=224,
                  learning_rate=0.001,
                  patch_size=32,
                  n_block_mlp_mixer=8,
                  batch_size=32,
                  epochs=32,
                  val_size=0.2,
-                 augments=None):
-        self.train_data = train_data
+                 augments=None,
+                 retrain=False):
+        self.train_path = train_path
+        self.val_path = val_path
         self.image_size = image_size
         self.epochs = epochs
         self.batch_size = batch_size
@@ -28,6 +35,7 @@ class Trainer:
 
         assert (image_size * image_size) % (
                 patch_size * patch_size) == 0, "Make sure the image size is dividable by patch size"
+        S = (args.image_size * args.image_size) // (args.patch_size * args.patch_size)
 
         if augments is None:
             self.augments = Sequential([Normalization(),
@@ -41,7 +49,8 @@ class Trainer:
         self.optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999)
         self.loss_object = SparseCategoricalCrossentropy(from_logits=True)
 
-        self.train_acc_metric = SparseCategoricalAccuracy()
+        self.train_acc_metric = SparseCategoricalAccuracy(name="train")
+        self.val_acc_metric = SparseCategoricalAccuracy(name="val")
 
         # Initialize check point
         self.saved_checkpoint = os.getcwd() + "/saved_checkpoint/"
@@ -51,17 +60,34 @@ class Trainer:
                                    optimizer=self.optimizer)
         self.ckpt_manager = tf.train.CheckpointManager(ckpt, self.saved_checkpoint, max_to_keep=5)
 
+        if retrain:
+            print("[INFO] Retrain...")
+            print("[INFO] Loaded model.")
+            self.ckpt_manager.restore_or_initialize()
+            print("[INFO] Start training...")
+
     def train(self):
-        for epoch in range(epochs):
-            x_train, y_train = Loader(self.train_data, batch_size=self.batch_size, image_size=self.image_size).build()
+        for epoch in range(self.epochs):
+            x_train, y_train = Loader(self.train_path, batch_size=self.batch_size, image_size=self.image_size).build()
             pbar = tqdm(enumerate(zip(x_train, y_train)), total=len(x_train))
             for iter, (x, y) in pbar:
                 loss = self.train_step(x, y)
 
-                pbar.set_description(
-                    "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  ".format(epoch, loss, self.train_acc_metric.result()))
+                if self.val_path is not None:
+                    x_val, y_val = Loader(self.val_path, batch_size=self.batch_size, image_size=self.image_size).build()
+                    for _x, _y in zip(x_val, y_val):
+                        self.val_step(x, y)
+                    description = "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  |  Val_acc: {}  ".format(epoch, loss,
+                                                                                                       self.train_acc_metric.result(),
+                                                                                                       self.val_acc_metric.result())
+                else:
+                    description = "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  ".format(epoch, loss,
+                                                                                       self.train_acc_metric.result())
+
+                pbar.set_description(description)
 
             self.train_acc_metric.reset_state()
+            self.val_acc_metric.reset_state()
         self.ckpt_manager.save()
 
     @tf.function
@@ -77,10 +103,15 @@ class Trainer:
         self.train_acc_metric.update_state(y, pred)
         return loss
 
+    @tf.function
+    def val_step(self, x, y):
+        y_pred = self.model(x)
+        self.val_acc_metric.update_state(y, y_pred)
+
     def predict(self, image_path):
         images = load_img(image_path)
         images = img_to_array(images)[tf.newaxis, ...]
-        images = tf.image.resize(images, size=(self.image_size, image_size))
+        images = tf.image.resize(images, size=(self.image_size, self.image_size))
         self.ckpt_manager.restore_or_initialize()
         return self.model.predict(images)
 
@@ -101,24 +132,45 @@ def setup_gpu():
 
 
 if __name__ == '__main__':
-    train_path = "dataset/train"
-    image_size = 224
-    patch_size = 32
-    batch_size = 4
-    epochs = 20
-    classes = 2
-    n_blocks = 8
-    C = 512
-    DC = 2048
-    S = (image_size * image_size) // (patch_size * patch_size)
-    DS = 256
-    augments = False
-    trainer = Trainer(train_data=train_path,
-                      C=C, DC=DC, S=S, DS=DS,
-                      classes=classes, image_size=image_size,
-                      patch_size=patch_size, batch_size=batch_size,
-                      epochs=epochs, n_block_mlp_mixer=n_blocks, augments=augments)
+    """
+    python train.py --train-path=dataset/train --val-path=dataset/val --epochs=20
+    """
+    parser = ArgumentParser()
 
-    test_image = "dataset/train/faces/00000.jpg"
+    # FIXME
+    # Arguments users used when running command lines
+    parser.add_argument("--train-path", required=True, type=str)
+    parser.add_argument("--val-path", default=None, type=str)
+    parser.add_argument("--classes", default=2, type=int)
+    parser.add_argument("--batch-size", default=32, type=int)
+    parser.add_argument("--epochs", default=1000, type=int)
+    parser.add_argument("--n_blocks", default=8, type=int)
+    parser.add_argument("--C", default=512, type=int)
+    parser.add_argument("--DC", default=1024, type=int)
+    parser.add_argument("--DS", default=256, type=int)
+    parser.add_argument("--image-size", default=224, type=int)
+    parser.add_argument("--patch-size", default=32, type=int)
+    parser.add_argument("--augments", default=False, type=bool)
+    parser.add_argument("--retrain", default=False, type=bool)
+
+    args = parser.parse_args()
+
+    # FIXME
+    # Project Description
+    print('---------------------Welcome to Hợp tác xã Kiên trì-------------------')
+    print('Github: https://github.com/Xunino')
+    print('Email : ndlinh.ai@gmail.com')
+    print('------------------------------------------------------------------------')
+    print(f'MLP Mixer model with hyper-params:')
+    print('------------------------------------')
+    for k, v in vars(args).items():
+        print(f"|  +) {k} = {v}")
+    print('====================================')
+
+    trainer = Trainer(train_path=args.train_path,
+                      val_path=args.val_path,
+                      C=args.C, DC=args.DC, DS=args.DS,
+                      classes=args.classes, image_size=args.image_size,
+                      patch_size=args.patch_size, batch_size=args.batch_size,
+                      epochs=args.epochs, n_block_mlp_mixer=args.n_blocks, augments=args.augments, retrain=args.retrain)
     trainer.train()
-    print(trainer.predict(test_image))
