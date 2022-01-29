@@ -67,7 +67,7 @@ class Trainer:
     @tf.function
     def train_step(self, x, y):
         with tf.GradientTape() as tape:
-            if self.augments is not None:
+            if self.augments:
                 x = self.augments(x)
             pred = self.model(x, training=True)
             loss = self.loss_object(y, pred)
