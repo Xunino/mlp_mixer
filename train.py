@@ -2,6 +2,7 @@ import os
 import tensorflow as tf
 from tqdm import tqdm
 from loader import Loader
+from metrics import CustomSchedule
 from argparse import ArgumentParser
 from models.MLP_model import MLPMixerModel
 from tensorflow.keras.optimizers import Adam
@@ -45,10 +46,14 @@ class Trainer:
         else:
             self.augments = augments
 
-        self.model = MLPMixerModel(C, DC, S, DS, classes, patch_size, n_block_mlp_mixer)
-        self.optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999)
-        self.loss_object = SparseCategoricalCrossentropy(from_logits=True)
+        if retrain:
+            lr = learning_rate
+        else:
+            lr = CustomSchedule(C)
 
+        self.model = MLPMixerModel(C, DC, S, DS, classes, patch_size, n_block_mlp_mixer)
+        self.optimizer = Adam(learning_rate=lr, beta_1=0.9, beta_2=0.999)
+        self.loss_object = SparseCategoricalCrossentropy(from_logits=True)
         self.train_acc_metric = SparseCategoricalAccuracy(name="train")
         self.val_acc_metric = SparseCategoricalAccuracy(name="val")
 
