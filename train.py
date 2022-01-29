@@ -31,7 +31,6 @@ class Trainer:
         self.loss_object = SparseCategoricalCrossentropy(from_logits=True)
 
         self.train_acc_metric = SparseCategoricalAccuracy()
-        self.val_acc_metric = SparseCategoricalAccuracy()
 
         # Initialize check point
         self.saved_checkpoint = os.getcwd() + "/saved_checkpoint/"
@@ -52,7 +51,6 @@ class Trainer:
                     "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  ".format(epoch, loss, self.train_acc_metric.result()))
 
             self.train_acc_metric.reset_state()
-            self.val_acc_metric.reset_state()
             self.ckpt_manager.save()
 
     @tf.function
