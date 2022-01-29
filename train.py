@@ -62,7 +62,7 @@ class Trainer:
                     "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  ".format(epoch, loss, self.train_acc_metric.result()))
 
             self.train_acc_metric.reset_state()
-            self.ckpt_manager.save()
+        self.ckpt_manager.save()
 
     @tf.function
     def train_step(self, x, y):
@@ -112,11 +112,12 @@ if __name__ == '__main__':
     DC = 2048
     S = (image_size * image_size) // (patch_size * patch_size)
     DS = 256
+    augments = False
     trainer = Trainer(train_data=train_path,
                       C=C, DC=DC, S=S, DS=DS,
                       classes=classes, image_size=image_size,
                       patch_size=patch_size, batch_size=batch_size,
-                      epochs=epochs, n_block_mlp_mixer=n_blocks)
+                      epochs=epochs, n_block_mlp_mixer=n_blocks, augments=augments)
 
     test_image = "dataset/train/faces/00000.jpg"
     trainer.train()
