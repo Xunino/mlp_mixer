@@ -105,7 +105,7 @@ class Trainer:
 
     @tf.function
     def val_step(self, x, y):
-        y_pred = self.model(x)
+        y_pred = self.model(x, training=False)
         self.val_acc_metric.update_state(y, y_pred)
 
     def predict(self, image_path):
