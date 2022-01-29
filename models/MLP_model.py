@@ -1,7 +1,24 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import Layer, Dense, LayerNormalization, GlobalAvgPool1D, Dropout
+from tensorflow.keras.layers.experimental.preprocessing import Normalization, RandomFlip, RandomRotation, RandomZoom, \
+    Resizing
 
+
+class MakePatches(Layer):
+    def __init__(self, patch_size):
+        super(MakePatches, self).__init__()
+        self.patch_size = patch_size
+
+    def __call__(self, images):
+        batch_size = tf.shape(images)[0]
+        patches = tf.image.extract_patches(images,
+                                           sizes=[1, self.patch_size, self.patch_size, 1],
+                                           strides=[1, self.patch_size, self.patch_size, 1],
+                                           rates=[1, 1, 1, 1],
+                                           padding="VALID")
+        patches = tf.reshape(patches, [batch_size, -1, 3 * self.patch_size ** 2])  # (batch_size, patches, C)
+        return patches
 
 
 class MLPMixer(Layer):
@@ -57,16 +74,27 @@ class MLPMixer(Layer):
 
 
 class MLPMixerModel(Model):
-    def __init__(self, C, DC, S, DS, num_classes, n_block_mlp_mixer=8, name=None):
+    def __init__(self, C, DC, S, DS, num_classes, image_size, patch_size=32, n_block_mlp_mixer=8):
         """
         :param C: Hidden dims
         :param DC: MLP_dims (2048)
         :param S: Patches (token) (HW/P**2)
         :param DS: MLP_dims (256)
+        :param patch_size: (32)
         :param num_classes:
         :param n_block_mlp_mixer: (8)
         """
-        super(MLPMixerModel, self).__init__(name=name)
+        super(MLPMixerModel, self).__init__()
+        self.augments = Sequential([
+            # Resizing(height=image_size, width=image_size),
+            Normalization(),
+            RandomFlip(),
+            RandomRotation(factor=0.02),
+            RandomZoom(height_factor=0.2, width_factor=0.2)
+        ])
+
+        self.patches = MakePatches(patch_size)
+
         self.projection = Dense(C)
         self.blocks = [MLPMixer(C, DC, S, DS) for _ in range(n_block_mlp_mixer)]
 
@@ -77,6 +105,8 @@ class MLPMixerModel(Model):
         ])
 
     def __call__(self, x, *args, **kwargs):
+        x = self.augments(x)
+        x = self.patches(x)
         x = self.projection(x)
         for block in self.blocks:
             x = block(x)
