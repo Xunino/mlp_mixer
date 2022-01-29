@@ -1,8 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.layers import Layer, Dense, LayerNormalization, GlobalAvgPool1D, Dropout
-from tensorflow.keras.layers.experimental.preprocessing import Normalization, RandomFlip, RandomRotation, RandomZoom, \
-    Resizing
+from tensorflow.keras.layers import Layer, Dense, LayerNormalization, GlobalAvgPool1D, Dropout, InputLayer
 
 
 class MakePatches(Layer):
@@ -10,14 +8,13 @@ class MakePatches(Layer):
         super(MakePatches, self).__init__()
         self.patch_size = patch_size
 
-    def __call__(self, images):
-        batch_size = tf.shape(images)[0]
-        patches = tf.image.extract_patches(images,
+    def __call__(self, x, *args, **kwargs):
+        patches = tf.image.extract_patches(x,
                                            sizes=[1, self.patch_size, self.patch_size, 1],
                                            strides=[1, self.patch_size, self.patch_size, 1],
                                            rates=[1, 1, 1, 1],
                                            padding="VALID")
-        patches = tf.reshape(patches, [batch_size, -1, 3 * self.patch_size ** 2])  # (batch_size, patches, C)
+        patches = tf.reshape(patches, [tf.shape(x)[0], -1, 3 * self.patch_size ** 2])  # (batch_size, patches, C)
         return patches
 
 
@@ -85,14 +82,10 @@ class MLPMixerModel(Model):
         :param n_block_mlp_mixer: (8)
         """
         super(MLPMixerModel, self).__init__()
-        self.augments = Sequential([
-            Normalization(),
-            RandomFlip(),
-            RandomRotation(factor=0.02),
-            RandomZoom(height_factor=0.2, width_factor=0.2)
+        self.patches = Sequential([
+            InputLayer(),
+            MakePatches(patch_size)
         ])
-
-        self.patches = MakePatches(patch_size)
 
         self.projection = Dense(C)
         self.blocks = [MLPMixer(C, DC, S, DS) for _ in range(n_block_mlp_mixer)]
@@ -104,7 +97,6 @@ class MLPMixerModel(Model):
         ])
 
     def __call__(self, x, *args, **kwargs):
-        x = self.augments(x)
         x = self.patches(x)
         x = self.projection(x)
         for block in self.blocks:

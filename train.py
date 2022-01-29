@@ -7,6 +7,8 @@ from tensorflow.keras.losses import SparseCategoricalCrossentropy
 from tensorflow.keras.metrics import SparseCategoricalAccuracy, Mean
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from loader import Loader
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers.experimental.preprocessing import Normalization, RandomFlip, RandomRotation, RandomZoom
 
 
 class Trainer:
@@ -16,7 +18,8 @@ class Trainer:
                  n_block_mlp_mixer=8,
                  batch_size=32,
                  epochs=32,
-                 val_size=0.2):
+                 val_size=0.2,
+                 augments=None):
         self.train_data = train_data
         self.image_size = image_size
         self.epochs = epochs
@@ -25,6 +28,14 @@ class Trainer:
 
         assert (image_size * image_size) % (
                 patch_size * patch_size) == 0, "Make sure the image size is dividable by patch size"
+
+        if augments is None:
+            self.augments = Sequential([Normalization(),
+                                        RandomFlip(),
+                                        RandomRotation(factor=0.02),
+                                        RandomZoom(height_factor=0.2, width_factor=0.2)])
+        else:
+            self.augments = augments
 
         self.model = MLPMixerModel(C, DC, S, DS, classes, patch_size, n_block_mlp_mixer)
         self.optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999)
@@ -56,6 +67,8 @@ class Trainer:
     @tf.function
     def train_step(self, x, y):
         with tf.GradientTape() as tape:
+            if self.augments is not None:
+                x = self.augments(x)
             pred = self.model(x, training=True)
             loss = self.loss_object(y, pred)
 
