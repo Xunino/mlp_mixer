@@ -77,11 +77,12 @@ class Trainer:
                     x_val, y_val = Loader(self.val_path, batch_size=self.batch_size, image_size=self.image_size).build()
                     for _x, _y in zip(x_val, y_val):
                         self.val_step(x, y)
-                    description = "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  |  Val_acc: {:.4f}  ".format(epoch, loss,
-                                                                                                       self.train_acc_metric.result(),
-                                                                                                       self.val_acc_metric.result())
+                    description = "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  |  Val_acc: {:.4f}  ".format(epoch + 1,
+                                                                                                           loss,
+                                                                                                           self.train_acc_metric.result(),
+                                                                                                           self.val_acc_metric.result())
                 else:
-                    description = "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  ".format(epoch, loss,
+                    description = "Epoch {}  |  Loss: {:.4f}  |  Acc: {:.4f}  ".format(epoch + 1, loss,
                                                                                        self.train_acc_metric.result())
 
                 pbar.set_description(description)
