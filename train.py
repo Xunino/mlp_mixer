@@ -3,11 +3,9 @@ import tensorflow as tf
 from tqdm import tqdm
 from models.MLP_model import MLPMixerModel
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import image_dataset_from_directory
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
 from tensorflow.keras.metrics import SparseCategoricalAccuracy, Mean
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.models import Sequential
 from loader import Loader
 
 
@@ -28,7 +26,7 @@ class Trainer:
         assert (image_size * image_size) % (
                 patch_size * patch_size) == 0, "Make sure the image size is dividable by patch size"
 
-        self.model = MLPMixerModel(C, DC, S, DS, classes, image_size, patch_size, n_block_mlp_mixer)
+        self.model = MLPMixerModel(C, DC, S, DS, classes, patch_size, n_block_mlp_mixer)
         self.optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999)
         self.loss_object = SparseCategoricalCrossentropy(from_logits=True)
 

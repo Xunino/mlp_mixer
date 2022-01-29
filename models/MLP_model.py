@@ -74,7 +74,7 @@ class MLPMixer(Layer):
 
 
 class MLPMixerModel(Model):
-    def __init__(self, C, DC, S, DS, num_classes, image_size, patch_size=32, n_block_mlp_mixer=8):
+    def __init__(self, C, DC, S, DS, num_classes, patch_size=32, n_block_mlp_mixer=8):
         """
         :param C: Hidden dims
         :param DC: MLP_dims (2048)
@@ -86,7 +86,6 @@ class MLPMixerModel(Model):
         """
         super(MLPMixerModel, self).__init__()
         self.augments = Sequential([
-            # Resizing(height=image_size, width=image_size),
             Normalization(),
             RandomFlip(),
             RandomRotation(factor=0.02),
