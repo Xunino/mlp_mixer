@@ -92,8 +92,12 @@ class Trainer:
 
                 pbar.set_description(description)
 
+                if iter % 100:
+                    self.ckpt_manager.save()
+
             self.train_acc_metric.reset_state()
             self.val_acc_metric.reset_state()
+
         self.ckpt_manager.save()
 
     @tf.function
