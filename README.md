@@ -70,5 +70,7 @@ val/
 **Script training:**
 
 ```
-python train.py --train-path={dataset/train} --val-path={dataset/val} --batch-size=32 --epochs=100 --n_blocks=8 --C=512 --DC=1024 --DS=256 --image-size=224 --patch-size=32 --augments=False --retrain=False
+python3 train.py --train-path={dataset/train} --val-path={dataset/val} --batch-size=32 --epochs=100 --n_blocks=8 --C=512 --DC=1024 --DS=256 --image-size=224 --patch-size=32 --augments=False --retrain=False
 ```
+
+- [Sample Colab](https://colab.research.google.com/drive/10sCbMku9ep9PK1U55IozjOrtlIFOsRO2?usp=sharing)
