@@ -15,6 +15,9 @@ class Loader:
         self.list_image_labels = []
         self.get_list_images()
 
+    def get_n_classes(self):
+        return len(np.unique(self.list_image_labels))
+
     def get_list_images(self):
         for dir_names in os.listdir(self.image_path):
             for file in os.listdir(os.path.join(self.image_path, dir_names)):

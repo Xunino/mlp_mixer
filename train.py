@@ -17,7 +17,6 @@ class Trainer:
     def __init__(self, C, DC, DS,
                  train_path,
                  val_path,
-                 classes,
                  image_size=224,
                  learning_rate=0.001,
                  patch_size=32,
@@ -51,7 +50,10 @@ class Trainer:
         else:
             lr = CustomSchedule(C)
 
-        self.model = MLPMixerModel(C, DC, S, DS, classes, patch_size, n_block_mlp_mixer)
+        # Data loader
+        self.data_loader = Loader(self.train_path, batch_size=self.batch_size, image_size=self.image_size)
+
+        self.model = MLPMixerModel(C, DC, S, DS, self.data_loader.get_n_classes(), patch_size, n_block_mlp_mixer)
         self.optimizer = Adam(learning_rate=lr, beta_1=0.9, beta_2=0.999)
         self.loss_object = SparseCategoricalCrossentropy(from_logits=True)
         self.train_acc_metric = SparseCategoricalAccuracy(name="train")
@@ -73,7 +75,7 @@ class Trainer:
 
     def train(self):
         for epoch in range(self.epochs):
-            x_train, y_train = Loader(self.train_path, batch_size=self.batch_size, image_size=self.image_size).build()
+            x_train, y_train = self.data_loader.build()
             pbar = tqdm(enumerate(zip(x_train, y_train)), total=len(x_train))
             for iter, (x, y) in pbar:
                 loss = self.train_step(x, y)
@@ -180,7 +182,7 @@ if __name__ == '__main__':
     trainer = Trainer(train_path=args.train_path,
                       val_path=args.val_path,
                       C=args.C, DC=args.DC, DS=args.DS,
-                      classes=args.classes, image_size=args.image_size,
+                      image_size=args.image_size,
                       patch_size=args.patch_size, batch_size=args.batch_size,
                       epochs=args.epochs, n_block_mlp_mixer=args.n_blocks, augments=args.augments, retrain=args.retrain)
     trainer.train()
