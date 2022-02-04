@@ -153,7 +153,6 @@ if __name__ == '__main__':
     # Arguments users used when running command lines
     parser.add_argument("--train-path", required=True, type=str)
     parser.add_argument("--val-path", default=None, type=str)
-    parser.add_argument("--classes", default=2, type=int)
     parser.add_argument("--batch-size", default=32, type=int)
     parser.add_argument("--epochs", default=1000, type=int)
     parser.add_argument("--n_blocks", default=8, type=int)
