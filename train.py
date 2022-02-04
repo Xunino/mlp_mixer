@@ -24,7 +24,7 @@ class Trainer:
                  batch_size=32,
                  epochs=32,
                  val_size=0.2,
-                 augments=None,
+                 augments=False,
                  retrain=False):
         self.train_path = train_path
         self.val_path = val_path
@@ -37,13 +37,11 @@ class Trainer:
                 patch_size * patch_size) == 0, "Make sure the image size is dividable by patch size"
         S = (args.image_size * args.image_size) // (args.patch_size * args.patch_size)
 
-        if augments is None:
+        if augments:
             self.augments = Sequential([Normalization(),
                                         RandomFlip(),
                                         RandomRotation(factor=0.02),
                                         RandomZoom(height_factor=0.2, width_factor=0.2)])
-        else:
-            self.augments = augments
 
         if retrain:
             lr = learning_rate
@@ -145,7 +143,7 @@ def setup_gpu():
 
 if __name__ == '__main__':
     """
-    python train.py --train-path=dataset/train --val-path=dataset/val --epochs=20
+    python train.py --train-path=dataset/train --val-path=dataset/val --epochs=20 --augments=True
     """
     parser = ArgumentParser()
 
