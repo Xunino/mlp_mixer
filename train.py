@@ -37,6 +37,7 @@ class Trainer:
                 patch_size * patch_size) == 0, "Make sure the image size is dividable by patch size"
         S = (args.image_size * args.image_size) // (args.patch_size * args.patch_size)
 
+        self.augments = False
         if augments:
             self.augments = Sequential([Normalization(),
                                         RandomFlip(),
