@@ -91,10 +91,16 @@ class MLPMixerModel(Model):
         self.projection = Dense(C)
         self.blocks = [MLPMixer(C, DC, S, DS) for _ in range(n_block_mlp_mixer)]
 
+        assert num_classes > 0
+        if num_classes <= 2:
+            activation = "sigmoid"
+        else:
+            activation = "softmax"
+
         self.classification = Sequential([
             GlobalAvgPool1D(),
             Dropout(0.2),
-            Dense(num_classes, activation="softmax")
+            Dense(num_classes, activation=activation)
         ])
 
     def __call__(self, x, *args, **kwargs):
