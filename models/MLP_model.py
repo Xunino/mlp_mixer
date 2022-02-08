@@ -71,20 +71,19 @@ class MLPMixer(Layer):
 
 
 class MLPMixerModel(Model):
-    def __init__(self, C, DC, S, DS, num_classes, image_size=224, patch_size=32, n_block_mlp_mixer=8):
+    def __init__(self, C, DC, S, DS, num_classes, patch_size=32, n_block_mlp_mixer=8):
         """
         :param C: Hidden dims
         :param DC: MLP_dims (2048)
         :param S: Patches (token) (HW/P**2)
         :param DS: MLP_dims (256)
-        :param image_size: (224)
         :param patch_size: (32)
         :param num_classes:
         :param n_block_mlp_mixer: (8)
         """
         super(MLPMixerModel, self).__init__()
         self.patches = Sequential([
-            InputLayer(),
+            InputLayer(input_shape=(patch_size, patch_size, 3)),
             MakePatches(patch_size)
         ])
 
@@ -123,7 +122,7 @@ if __name__ == '__main__':
     num_classes = 1000
     n_blocks = 8
     images = tf.random.uniform(shape=(1, image_size, image_size, 3), maxval=1.)
-    mlp = MLPMixerModel(C, DC, S, DS, num_classes, image_size=image_size, patch_size=patch_size,
+    mlp = MLPMixerModel(C, DC, S, DS, num_classes, patch_size=patch_size,
                         n_block_mlp_mixer=n_blocks)
     x = mlp(images)
     print(x.shape)
