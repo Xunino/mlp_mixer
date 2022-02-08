@@ -83,7 +83,7 @@ class MLPMixerModel(Model):
         """
         super(MLPMixerModel, self).__init__()
         self.patches = Sequential([
-            InputLayer(input_shape=(patch_size, patch_size, 3)),
+            InputLayer(),
             MakePatches(patch_size)
         ])
 
